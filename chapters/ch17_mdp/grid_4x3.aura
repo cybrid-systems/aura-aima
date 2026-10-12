@@ -1,0 +1,11 @@
+; Fig 17.1 4x3 world: value iteration utilities and the optimal policy.
+(require "aima/mdp" all:)
+(define m (make-grid-mdp (list (list -0.04 -0.04 -0.04 1) (list -0.04 'X -0.04 -1) (list -0.04 -0.04 -0.04 -0.04))
+                         (list (cons 3 2) (cons 3 1)) 0.9))
+(define U (value-iteration m 0.001))
+(let lp ((i 0))
+  (if (< i (mdp-n m))
+      (begin (display (mdp-state m i)) (display " U=") (display (vector-ref U i)) (newline) (lp (+ i 1)))
+      #f))
+(display "policy (sorted states): ") (display (policy->string (best-policy m U))) (newline)
+(display "policy iteration:       ") (display (policy->string (vector-ref (policy-iteration m) 0))) (newline)

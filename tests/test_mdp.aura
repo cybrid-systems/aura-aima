@@ -1,0 +1,56 @@
+;; Ch17 MDPs: value iteration utilities, best policy and policy iteration on the
+;; 4x3 world (Fig 17.1, three reward settings) and aima-python's 6x5 grid.
+;; Expected values: tests/oracle/mdp_oracle.out (aima-python). Grids use (list ...)
+;; and the symbol X for walls: quoted data / #f literals are unsafe (#4487, #4490).
+(require "aima/check" all:)
+(require "aima/mdp" all:)
+
+(define (check-utils name m U expected)
+  (let lp ((i 0) (es expected))
+    (if (null? es) #t
+        (begin (check-near (string-append name " U" (number->string i)) (vector-ref U i) (car es) 1.0e-6) (lp (+ i 1) (cdr es))))))
+
+; --- fig17
+(define m (make-grid-mdp (list (list -0.04 -0.04 -0.04 1) (list -0.04 'X -0.04 -1) (list -0.04 -0.04 -0.04 -0.04)) (list (cons 3 2) (cons 3 1)) 0.9))
+(check-utils "fig17 vi 0.001" m (value-iteration m 0.001) (list 0.296288 0.398443 0.509394 0.253867 0.649586 0.344754 0.486440 0.795362 0.129873 -1.000000 1.000000))
+(check-utils "fig17 vi 0.01" m (value-iteration m 0.01) (list 0.295435 0.398102 0.509285 0.253487 0.649581 0.344613 0.486437 0.795361 0.129589 -1.000000 1.000000))
+(check-equal "fig17 best policy" (policy->string (best-policy m (value-iteration m 0.001))) "NNEEENNEW..")
+(define r (policy-iteration m))
+(check-equal "fig17 policy iteration" (policy->string (vector-ref r 0)) "NNEEENNEW..")
+(check-equal "fig17 state count" (mdp-n m) 11)
+
+; --- r-0.1
+(define m (make-grid-mdp (list (list -0.1 -0.1 -0.1 1) (list -0.1 'X -0.1 -1) (list -0.1 -0.1 -0.1 -0.1)) (list (cons 3 2) (cons 3 1)) 0.9))
+(check-utils "r-0.1 vi 0.001" m (value-iteration m 0.001) (list 0.007138 0.146742 0.306065 0.010447 0.507395 0.150854 0.358312 0.716756 -0.089474 -1.000000 1.000000))
+(check-utils "r-0.1 vi 0.01" m (value-iteration m 0.01) (list 0.006334 0.146420 0.305962 0.010093 0.507390 0.150722 0.358309 0.716755 -0.089739 -1.000000 1.000000))
+(check-equal "r-0.1 best policy" (policy->string (best-policy m (value-iteration m 0.001))) "NNEEENNEW..")
+(define r (policy-iteration m))
+(check-equal "r-0.1 policy iteration" (policy->string (vector-ref r 0)) "NNEEENNEW..")
+(check-equal "r-0.1 state count" (mdp-n m) 11)
+
+; --- r-2
+(define m (make-grid-mdp (list (list -2 -2 -2 1) (list -2 'X -2 -1) (list -2 -2 -2 -2)) (list (cons 3 2) (cons 3 1)) 0.9))
+(check-utils "r-2 vi 0.001" m (value-iteration m 0.001) (list -8.587954 -7.800890 -6.106718 -7.101435 -3.965371 -5.309991 -3.354349 -1.738342 -3.514173 -1.000000 1.000000))
+(check-utils "r-2 vi 0.01" m (value-iteration m 0.01) (list -8.587224 -7.800001 -6.106429 -7.101255 -3.965355 -5.309947 -3.354337 -1.738338 -3.514158 -1.000000 1.000000))
+(check-equal "r-2 best policy" (policy->string (best-policy m (value-iteration m 0.001))) "ENEEEEEEN..")
+(define r (policy-iteration m))
+(check-equal "r-2 policy iteration" (policy->string (vector-ref r 0)) "ENEEEEEEN..")
+(check-equal "r-2 state count" (mdp-n m) 11)
+
+; --- 6x5
+(define m (make-grid-mdp (list (list -1.0 -0.1 -0.1 -0.1 -0.1 0.5) (list -0.1 'X 'X -0.5 -0.1 -0.1) (list -0.1 'X 1.0 3.0 'X -0.1) (list -0.1 -0.1 -0.1 'X 'X -0.1) (list 0.5 -0.1 -0.1 -0.1 -0.1 -1.0)) (list (cons 2 2) (cons 3 2) (cons 0 4) (cons 5 0)) 0.9))
+(check-utils "6x5 vi 0.001" m (value-iteration m 0.001) (list 4.360063 3.650172 3.082952 2.584905 -1.000000 3.650172 3.139051 2.087956 3.035393 2.602082 1.000000 2.516979 2.543146 3.000000 2.300541 3.005588 2.110929 3.139068 3.650190 -1.000000 2.584922 3.082970 3.650190 4.360081))
+(check-utils "6x5 vi 0.01" m (value-iteration m 0.01) (list 4.350592 3.640701 3.073481 2.575434 -1.000000 3.640701 3.129579 2.078752 3.025922 2.592610 1.000000 2.507774 2.533675 3.000000 2.292173 2.996383 2.101458 3.129759 3.640881 -1.000000 2.575613 3.073660 3.640881 4.350772))
+(check-equal "6x5 best policy" (policy->string (best-policy m (value-iteration m 0.001))) "WSSS.WWEWS.EW.EEWEE.NNNE")
+(define r (policy-iteration m))
+(check-equal "6x5 policy iteration" (policy->string (vector-ref r 0)) "WSSS.WWEWS.EW.EEWEE.NNNE")
+(check-equal "6x5 state count" (mdp-n m) 24)
+
+; mechanics
+(define m (make-grid-mdp (list (list -0.04 -0.04 -0.04 1) (list -0.04 'X -0.04 -1) (list -0.04 -0.04 -0.04 -0.04)) (list (cons 3 2) (cons 3 1)) 0.9))
+(check-equal "fig17 (1,1) is a wall" (mdp-index m 1 1) -1)
+(check-true "fig17 terminals" (and (mdp-terminal? m (mdp-index m 3 2)) (mdp-terminal? m (mdp-index m 3 1)) (not (mdp-terminal? m (mdp-index m 0 0)))))
+(check-near "fig17 R(0,0)" (mdp-reward m (mdp-index m 0 0)) -0.04 1.0e-12)
+(define U (value-iteration m 0.001))
+(check-near "q-value terminal = R" (q-value m (mdp-index m 3 2) -1 U) 1 1.0e-12)
+(check-near "q-value (2,2) East" (q-value m (mdp-index m 2 2) 0 U) (+ -0.04 (* 0.9 (+ (* 0.8 1.0) (* 0.1 (vector-ref U (mdp-index m 2 2))) (* 0.1 (vector-ref U (mdp-index m 2 1)))))) 1.0e-9)

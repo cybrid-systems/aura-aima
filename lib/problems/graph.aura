@@ -4,6 +4,7 @@
 ; Neighbour order equals aima-python's UndirectedGraph dict order, so tie-breaking
 ; (and therefore DFS paths and expansion counts) matches.
 (require "aima/search" all:)
+(require "aima/list" all:)
 (export romania-map romania-locations australia-map graph-neighbors graph-distance
         make-graph-problem sym-assq)
 
@@ -70,7 +71,7 @@
 (define (make-graph-problem initial goal g locs)
   (make-problem initial
                 (lambda (s) (eq? s goal))
-                (lambda (s) (map car (graph-neighbors g s)))
+                (lambda (s) (lmap car (graph-neighbors g s)))
                 (lambda (s a) a)
                 (lambda (c s a s2) (+ c (graph-distance g s s2)))
                 (lambda (s) (sld locs s goal))))

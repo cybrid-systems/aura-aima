@@ -1,0 +1,135 @@
+; aima/mdp.aura — Markov decision processes (AIMA ch. 17): GridMDP, value
+; iteration (Fig 17.4), policy iteration with k-sweep policy evaluation
+; (Fig 17.7, modified policy iteration), best policy (Eq 17.4). Follows
+; aima-python mdp.py (MIT).
+;
+; Grid: list of rows, top row first (as written in the book), each cell a reward
+; or the symbol X for an obstacle. Rows/rewards are passed with (list ...): quoted
+; data is unsafe in Soft (#4487, #4490). Coordinates (x, y) have y = 0 at the bottom.
+; States are numbered in sorted (x, y) order. Actions are 0..3 = E N W S
+; (aima-python `orientations`); -1 is the terminal "None" action.
+(require "aima/list" all:)
+(export make-grid-mdp mdp-n mdp-state mdp-index mdp-reward mdp-terminal?
+        value-iteration best-policy policy-iteration policy-evaluation!
+        policy->string q-value)
+
+(define DIRS (vector (cons 1 0) (cons 0 1) (cons -1 0) (cons 0 -1)))
+(define (turn-right a) (remainder (+ a 3) 4))
+(define (turn-left a) (remainder (+ a 1) 4))
+
+; mdp = (vector states(vector of (x . y)) rewards(vector) terminal?(vector) T(vector of 4-vectors of transition lists) gamma index-hash)
+(define (mdp-n m) (vector-length (vector-ref m 0)))
+(define (mdp-state m i) (vector-ref (vector-ref m 0) i))
+(define (mdp-reward m i) (vector-ref (vector-ref m 1) i))
+(define (mdp-terminal? m i) (vector-ref (vector-ref m 2) i))
+(define (mdp-gamma m) (vector-ref m 4))
+(define (key x y) (+ (* x 1000) y))     ; int keys: pair keys hash by identity (#4489)
+(define (mdp-index m x y) (hash-ref (vector-ref m 5) (key x y) -1))
+(define (actions m i) (if (mdp-terminal? m i) (list -1) (list 0 1 2 3)))
+(define (T m i a)   ; list of (p j)
+  (if (< a 0) (list (list 0.0 i)) (vector-ref (vector-ref (vector-ref m 3) i) a)))
+
+(define (make-grid-mdp rows terminals gamma)
+  (let* ((nrows (length rows)) (ncols (length (car rows)))
+         (grid (list->vector (reverse rows)))       ; grid[y] with y = 0 at the bottom
+         (cell (lambda (x y) (list-ref (vector-ref grid y) x)))
+         (states (let lx ((x (- ncols 1)) (acc (list)))
+                   (if (< x 0) acc
+                       (lx (- x 1) (let ly ((y (- nrows 1)) (acc acc))
+                                     (if (< y 0) acc
+                                         (ly (- y 1) (if (eq? (cell x y) 'X) acc (cons (cons x y) acc)))))))))
+         (sv (list->vector states))
+         (n (vector-length sv))
+         (h (hash)))
+    (let lp ((i 0)) (if (< i n) (begin (hash-set! h (key (car (vector-ref sv i)) (cdr (vector-ref sv i))) i) (lp (+ i 1))) #f))
+    (let* ((idx (lambda (x y) (hash-ref h (key x y) -1)))
+           (go (lambda (i a)
+                 (let* ((s (vector-ref sv i)) (d (vector-ref DIRS a))
+                        (j (idx (+ (car s) (car d)) (+ (cdr s) (cdr d)))))
+                   (if (< j 0) i j))))
+           (term (make-vector n #f))
+           (rew (make-vector n 0))
+           (tr (make-vector n #f)))
+      (let lp ((i 0))
+        (if (< i n)
+            (let ((s (vector-ref sv i)))
+              (vector-set! rew i (cell (car s) (cdr s)))
+              (vector-set! tr i (vector (list (list 0.8 (go i 0)) (list 0.1 (go i (turn-right 0))) (list 0.1 (go i (turn-left 0))))
+                                        (list (list 0.8 (go i 1)) (list 0.1 (go i (turn-right 1))) (list 0.1 (go i (turn-left 1))))
+                                        (list (list 0.8 (go i 2)) (list 0.1 (go i (turn-right 2))) (list 0.1 (go i (turn-left 2))))
+                                        (list (list 0.8 (go i 3)) (list 0.1 (go i (turn-right 3))) (list 0.1 (go i (turn-left 3))))))
+              (lp (+ i 1)))
+            #f))
+      (for-each (lambda (t) (let ((j (idx (car t) (cdr t)))) (if (>= j 0) (vector-set! term j #t) #f))) terminals)
+      (vector sv rew term tr gamma h))))
+
+(define (expected-utility m a i U)
+  (let lp ((ts (T m i a)) (acc 0.0))
+    (if (null? ts) acc (lp (cdr ts) (+ acc (* (car (car ts)) (vector-ref U (cadr (car ts)))))))))
+
+(define (q-value m i a U)
+  (if (< a 0) (mdp-reward m i)
+      (let lp ((ts (T m i a)) (acc 0.0))
+        (if (null? ts) acc
+            (lp (cdr ts) (+ acc (* (car (car ts)) (+ (mdp-reward m i) (* (mdp-gamma m) (vector-ref U (cadr (car ts))))))))))))
+
+(define (copy-vector v)
+  (let ((w (make-vector (vector-length v) 0))) (let lp ((i 0)) (if (< i (vector-length v)) (begin (vector-set! w i (vector-ref v i)) (lp (+ i 1))) w))))
+
+; Fig 17.4. Like aima-python, returns U from the sweep *before* the last update.
+(define (value-iteration m eps)
+  (let ((n (mdp-n m)) (g (mdp-gamma m)) (U1 (make-vector (mdp-n m) 0.0)))
+    (let loop ()
+      (let ((U (copy-vector U1)))
+        (let sweep ((i 0) (delta 0.0))
+          (if (< i n)
+              (let ((best (let la ((as (actions m i)) (b -1.0e300))
+                            (if (null? as) b (la (cdr as) (max b (expected-utility m (car as) i U)))))))
+                (vector-set! U1 i (+ (mdp-reward m i) (* g best)))
+                (sweep (+ i 1) (max delta (abs (- (vector-ref U1 i) (vector-ref U i))))))
+              (if (<= delta (/ (* eps (- 1 g)) g)) U (loop))))))))
+
+(define (argmax-action m i U)   ; first maximum over actions (Python max)
+  (let lp ((as (cdr (actions m i))) (best (car (actions m i))) (bv (expected-utility m (car (actions m i)) i U)))
+    (if (null? as) best
+        (let ((v (expected-utility m (car as) i U)))
+          (if (> v bv) (lp (cdr as) (car as) v) (lp (cdr as) best bv))))))
+
+(define (best-policy m U)
+  (let ((pi (make-vector (mdp-n m) -1)))
+    (let lp ((i 0)) (if (< i (mdp-n m)) (begin (vector-set! pi i (argmax-action m i U)) (lp (+ i 1))) pi))))
+
+; k sweeps of in-place (Gauss-Seidel) evaluation, as aima-python policy_evaluation.
+(define (policy-evaluation! pi U m k)
+  (let ((n (mdp-n m)) (g (mdp-gamma m)))
+    (let rounds ((r 0))
+      (if (< r k)
+          (begin
+            (let lp ((i 0))
+              (if (< i n)
+                  (begin (vector-set! U i (+ (mdp-reward m i) (* g (expected-utility m (vector-ref pi i) i U))))
+                         (lp (+ i 1)))
+                  #f))
+            (rounds (+ r 1)))
+          U))))
+
+; Fig 17.7; initial policy = first action (E) everywhere (aima-python: random).
+; Returns (vector policy U iterations).
+(define (policy-iteration m)
+  (let* ((n (mdp-n m)) (U (make-vector n 0.0)) (pi (make-vector n 0)))
+    (let lp ((i 0)) (if (< i n) (begin (vector-set! pi i (car (actions m i))) (lp (+ i 1))) #f))
+    (let loop ((it 1))
+      (policy-evaluation! pi U m 20)
+      (let ((changed (let lp ((i 0) (ch #f))
+                       (if (< i n)
+                           (let ((a (argmax-action m i U)))
+                             (if (= a (vector-ref pi i)) (lp (+ i 1) ch) (begin (vector-set! pi i a) (lp (+ i 1) #t))))
+                           ch))))
+        (if changed (loop (+ it 1)) (vector pi U it))))))
+
+; "NNEEENNEW.." : one char per state in state order, "." for terminals.
+(define (policy->string pi)
+  (let lp ((i (- (vector-length pi) 1)) (acc ""))
+    (if (< i 0) acc
+        (lp (- i 1) (string-append (if (< (vector-ref pi i) 0) "." (vector-ref (vector "E" "N" "W" "S") (vector-ref pi i)))
+                                   acc)))))
