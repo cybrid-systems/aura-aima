@@ -1,0 +1,183 @@
+; aima/search.aura — uninformed and informed search (AIMA ch. 3).
+; Rewritten from the pseudocode in AIMA 4e Fig. 3.7-3.18 following the control
+; flow of aima-python search.py (MIT, https://github.com/aimacode/aima-python)
+; so that paths, costs and InstrumentedProblem counters match on shared problems.
+;
+; Problem = (vector initial goal? actions result path-cost h stats)
+;   goal?     : state -> bool
+;   actions   : state -> list of actions (order matters: it fixes tie-breaking)
+;   result    : state action -> state
+;   path-cost : c state action state2 -> number
+;   h         : state -> number (heuristic; used by greedy / A*)
+;   stats     : (vector succs goal-tests states), aima's InstrumentedProblem:
+;               succs = actions calls (= node expansions), goal-tests, states = result calls
+; Every problem is instrumented: the counters are always on and cheap.
+;
+; Node = (vector state parent action path-cost depth); parent is #f at the root.
+(require "aima/pq" all:)
+(export make-problem problem-initial problem-stats problem-reset! problem-h
+        node-state node-parent node-action node-cost node-depth
+        node-path-states node-solution
+        breadth-first-tree-search depth-first-tree-search
+        breadth-first-graph-search depth-first-graph-search
+        best-first-graph-search uniform-cost-search greedy-best-first-search
+        astar-search depth-limited-search iterative-deepening-search
+        search-succs search-goal-tests search-states)
+
+(define (make-problem initial goal? actions result path-cost h)
+  (vector initial goal? actions result path-cost h (vector 0 0 0)))
+(define (problem-initial p) (vector-ref p 0))
+(define (problem-stats p) (vector-ref p 6))
+(define (problem-reset! p) (vector-set! p 6 (vector 0 0 0)))
+(define (bump! p i) (let ((s (vector-ref p 6))) (vector-set! s i (+ (vector-ref s i) 1))))
+(define (search-succs p) (vector-ref (vector-ref p 6) 0))
+(define (search-goal-tests p) (vector-ref (vector-ref p 6) 1))
+(define (search-states p) (vector-ref (vector-ref p 6) 2))
+
+(define (p-goal? p s) (bump! p 1) ((vector-ref p 1) s))
+(define (p-actions p s) (bump! p 0) ((vector-ref p 2) s))
+(define (p-result p s a) (bump! p 2) ((vector-ref p 3) s a))
+(define (problem-h p) (vector-ref p 5))
+
+; --- nodes
+(define (make-node state parent action cost)
+  (vector state parent action cost (if parent (+ (vector-ref parent 4) 1) 0)))
+(define (root-node p) (make-node (problem-initial p) #f #f 0))
+(define (node-state n) (vector-ref n 0))
+(define (node-parent n) (vector-ref n 1))
+(define (node-action n) (vector-ref n 2))
+(define (node-cost n) (vector-ref n 3))
+(define (node-depth n) (vector-ref n 4))
+
+(define (child-node p n a)
+  (let* ((s (node-state n)) (s2 (p-result p s a)))
+    (make-node s2 n a ((vector-ref p 4) (node-cost n) s a s2))))
+
+; Children in action order (Node.expand).
+(define (expand p n)
+  (let lp ((as (p-actions p (node-state n))) (acc '()))
+    (if (null? as) (reverse acc) (lp (cdr as) (cons (child-node p n (car as)) acc)))))
+
+(define (node-path n)
+  (let lp ((n n) (acc '())) (if n (lp (node-parent n) (cons n acc)) acc)))
+(define (node-path-states n) (map node-state (node-path n)))
+(define (node-solution n) (map node-action (cdr (node-path n))))
+
+; --- small helpers: state sets keyed by a user key function.
+; Keys must be ints, strings or symbols: Aura hash tables compare other keys
+; (lists, vectors, floats) by identity — see IMPROVEMENTS.md.
+(define (member-state? s nodes)
+  (cond ((null? nodes) #f) ((equal? (node-state (car nodes)) s) #t) (else (member-state? s (cdr nodes)))))
+
+; --- FIFO queue: (vector front back) with back reversed.
+(define (make-fifo x) (vector (list x) '()))
+(define (fifo-empty? q) (and (null? (vector-ref q 0)) (null? (vector-ref q 1))))
+(define (fifo-push! q x) (vector-set! q 1 (cons x (vector-ref q 1))))
+(define (fifo-pop! q)
+  (if (null? (vector-ref q 0))
+      (begin (vector-set! q 0 (reverse (vector-ref q 1))) (vector-set! q 1 '()))
+      #f)
+  (let ((x (car (vector-ref q 0)))) (vector-set! q 0 (cdr (vector-ref q 0))) x))
+(define (fifo-has-state? q s)
+  (or (member-state? s (vector-ref q 0)) (member-state? s (vector-ref q 1))))
+
+; --- Fig 3.7 tree searches (loop forever on graphs with cycles)
+(define (breadth-first-tree-search p)
+  (let ((q (make-fifo (root-node p))))
+    (let lp ()
+      (if (fifo-empty? q) #f
+          (let ((n (fifo-pop! q)))
+            (if (p-goal? p (node-state n)) n
+                (begin (for-each (lambda (c) (fifo-push! q c)) (expand p n)) (lp))))))))
+
+(define (depth-first-tree-search p)
+  ; stack: head is the top; children pushed in order so the last child pops first
+  (let lp ((stack (list (root-node p))))
+    (if (null? stack) #f
+        (let ((n (car stack)))
+          (if (p-goal? p (node-state n)) n
+              (lp (let push ((cs (expand p n)) (st (cdr stack)))
+                    (if (null? cs) st (push (cdr cs) (cons (car cs) st))))))))))
+
+; --- Fig 3.7 depth-first graph search (explored set + frontier membership)
+(define (depth-first-graph-search p key)
+  (let ((explored (hash)))
+    (let lp ((stack (list (root-node p))))
+      (if (null? stack) #f
+          (let ((n (car stack)) (rest (cdr stack)))
+            (if (p-goal? p (node-state n)) n
+                (begin
+                  (hash-set! explored (key (node-state n)) #t)
+                  (lp (let push ((cs (expand p n)) (st rest))
+                        (cond ((null? cs) st)
+                              ((or (hash-ref explored (key (node-state (car cs))) #f)
+                                   (member-state? (node-state (car cs)) st))
+                               (push (cdr cs) st))
+                              (else (push (cdr cs) (cons (car cs) st)))))))))))))
+
+; --- Fig 3.11 breadth-first graph search (goal test on generation)
+(define (breadth-first-graph-search p key)
+  (let ((root (root-node p)))
+    (if (p-goal? p (node-state root)) root
+        (let ((q (make-fifo root)) (explored (hash)))
+          (let lp ()
+            (if (fifo-empty? q) #f
+                (let ((n (fifo-pop! q)))
+                  (hash-set! explored (key (node-state n)) #t)
+                  (let scan ((cs (expand p n)))
+                    (cond ((null? cs) (lp))
+                          ((or (hash-ref explored (key (node-state (car cs))) #f)
+                               (fifo-has-state? q (node-state (car cs))))
+                           (scan (cdr cs)))
+                          ((p-goal? p (node-state (car cs))) (car cs))
+                          (else (fifo-push! q (car cs)) (scan (cdr cs))))))))))))
+
+; --- best-first graph search on f(node); replaces a frontier node when a
+; cheaper path to the same state is found (aima-python best_first_graph_search).
+(define (best-first-graph-search p f key)
+  (let ((q (make-pq)) (explored (hash)))
+    (let ((root (root-node p))) (pq-push! q (f root) root))
+    (let lp ()
+      (if (pq-empty? q) #f
+          (let ((n (pq-pop! q)))
+            (if (p-goal? p (node-state n)) n
+                (begin
+                  (hash-set! explored (key (node-state n)) #t)
+                  (for-each
+                   (lambda (c)
+                     (let* ((s (node-state c))
+                            (same? (lambda (m) (equal? (node-state m) s)))
+                            (old (pq-find q same?)))
+                       (cond ((and (not (hash-ref explored (key s) #f)) (not old))
+                              (pq-push! q (f c) c))
+                             ((and old (< (f c) old))
+                              (pq-remove! q same?) (pq-push! q (f c) c))
+                             (else #f))))
+                   (expand p n))
+                  (lp))))))))
+
+(define (uniform-cost-search p key) (best-first-graph-search p node-cost key))
+(define (greedy-best-first-search p key)
+  (let ((h (problem-h p))) (best-first-graph-search p (lambda (n) (h (node-state n))) key)))
+(define (astar-search p key)
+  (let ((h (problem-h p)))
+    (best-first-graph-search p (lambda (n) (+ (node-cost n) (h (node-state n)))) key)))
+
+; --- Fig 3.17 / 3.18: returns a node, 'cutoff, or #f (failure)
+(define (depth-limited-search p limit)
+  (define (rdls n limit)
+    (cond ((p-goal? p (node-state n)) n)
+          ((= limit 0) 'cutoff)
+          (else
+           (let lp ((cs (expand p n)) (cut #f))
+             (if (null? cs) (if cut 'cutoff #f)
+                 (let ((r (rdls (car cs) (- limit 1))))
+                   (cond ((eq? r 'cutoff) (lp (cdr cs) #t))
+                         (r r)
+                         (else (lp (cdr cs) cut)))))))))
+  (rdls (root-node p) limit))
+
+(define (iterative-deepening-search p)
+  (let lp ((d 0))
+    (let ((r (depth-limited-search p d)))
+      (if (eq? r 'cutoff) (lp (+ d 1)) r))))

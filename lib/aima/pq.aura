@@ -1,0 +1,80 @@
+; aima/pq.aura — min priority queue (binary heap in a growable vector).
+; Entries are ordered by (f, counter): the counter is a monotonic tie-breaker,
+; so equal-f entries pop in insertion order, exactly like aima-python's
+; utils.PriorityQueue (heapq on (f, counter, item)).
+;
+; pq = (vector heap-vector size counter)
+(export make-pq pq-push! pq-pop! pq-empty? pq-size pq-find pq-remove!)
+
+(define (make-pq) (vector (make-vector 16 #f) 0 0))
+(define (pq-size q) (vector-ref q 1))
+(define (pq-empty? q) (= (vector-ref q 1) 0))
+
+; entry = (vector f counter item)
+(define (e< a b)
+  (or (< (vector-ref a 0) (vector-ref b 0))
+      (and (= (vector-ref a 0) (vector-ref b 0))
+           (< (vector-ref a 1) (vector-ref b 1)))))
+
+(define (grow! q)
+  (let* ((old (vector-ref q 0)) (n (vector-length old)) (new (make-vector (* 2 n) #f)))
+    (let lp ((i 0)) (if (< i n) (begin (vector-set! new i (vector-ref old i)) (lp (+ i 1))) #f))
+    (vector-set! q 0 new)))
+
+(define (swap! h i j)
+  (let ((t (vector-ref h i))) (vector-set! h i (vector-ref h j)) (vector-set! h j t)))
+
+(define (sift-up! h i)
+  (if (> i 0)
+      (let ((p (quotient (- i 1) 2)))
+        (if (e< (vector-ref h i) (vector-ref h p))
+            (begin (swap! h i p) (sift-up! h p))
+            #f))
+      #f))
+
+(define (sift-down! h n i)
+  (let* ((l (+ (* 2 i) 1)) (r (+ l 1))
+         (m (if (and (< l n) (e< (vector-ref h l) (vector-ref h i))) l i))
+         (m2 (if (and (< r n) (e< (vector-ref h r) (vector-ref h m))) r m)))
+    (if (= m2 i) #f (begin (swap! h i m2) (sift-down! h n m2)))))
+
+(define (pq-push! q f item)
+  (if (= (vector-ref q 1) (vector-length (vector-ref q 0))) (grow! q) #f)
+  (let ((h (vector-ref q 0)) (n (vector-ref q 1)))
+    (vector-set! h n (vector f (vector-ref q 2) item))
+    (vector-set! q 1 (+ n 1))
+    (vector-set! q 2 (+ (vector-ref q 2) 1))
+    (sift-up! h n)))
+
+; Pop the minimum entry; returns the item.
+(define (pq-pop! q)
+  (let* ((h (vector-ref q 0)) (n (- (vector-ref q 1) 1)) (top (vector-ref h 0)))
+    (vector-set! h 0 (vector-ref h n))
+    (vector-set! h n #f)
+    (vector-set! q 1 n)
+    (sift-down! h n 0)
+    (vector-ref top 2)))
+
+; Index of the first entry whose item satisfies pred, or -1.
+(define (pq-index q pred)
+  (let ((h (vector-ref q 0)) (n (vector-ref q 1)))
+    (let lp ((i 0))
+      (cond ((>= i n) -1)
+            ((pred (vector-ref (vector-ref h i) 2)) i)
+            (else (lp (+ i 1)))))))
+
+; f value of the first entry whose item satisfies pred, or #f.
+(define (pq-find q pred)
+  (let ((i (pq-index q pred)))
+    (if (< i 0) #f (vector-ref (vector-ref (vector-ref q 0) i) 0))))
+
+; Remove the first entry whose item satisfies pred (then restore heap order).
+(define (pq-remove! q pred)
+  (let ((i (pq-index q pred)))
+    (if (< i 0) #f
+        (let* ((h (vector-ref q 0)) (n (- (vector-ref q 1) 1)))
+          (vector-set! h i (vector-ref h n))
+          (vector-set! h n #f)
+          (vector-set! q 1 n)
+          (if (< i n) (begin (sift-down! h n i) (sift-up! h i)) #f)
+          #t))))

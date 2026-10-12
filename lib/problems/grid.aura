@@ -1,0 +1,30 @@
+; problems/grid.aura — 4-connected grid path finding (aima-python GridProblem).
+; State: (x . y). Actions in aima's directions4 order: W N E S. Unit step cost,
+; Manhattan-distance heuristic.
+(require "aima/search" all:)
+(export make-grid-problem grid-key)
+
+; (name dx dy); a quoted dotted pair with a symbol is mis-read, so plain lists.
+(define dirs '((W -1 0) (N 0 1) (E 1 0) (S 0 -1)))
+(define (step s a)
+  (let lp ((ds dirs))
+    (if (eq? (car (car ds)) a)
+        (cons (+ (car s) (cadr (car ds))) (+ (cdr s) (car (cddr (car ds)))))
+        (lp (cdr ds)))))
+
+(define (grid-key s) (+ (* (car s) 100000) (cdr s)))
+
+(define (make-grid-problem initial goal width height obstacles)
+  (define walls (hash))
+  (for-each (lambda (c) (hash-set! walls (grid-key c) #t)) obstacles)
+  (define (passable? c)
+    (and (>= (car c) 0) (< (car c) width) (>= (cdr c) 0) (< (cdr c) height)
+         (not (hash-ref walls (grid-key c) #f))))
+  (make-problem initial
+                (lambda (s) (equal? s goal))
+                (lambda (s) (let lp ((ds dirs) (acc '()))
+                              (if (null? ds) (reverse acc)
+                                  (lp (cdr ds) (if (passable? (step s (car (car ds)))) (cons (car (car ds)) acc) acc)))))
+                step
+                (lambda (c s a s2) (+ c 1))
+                (lambda (s) (+ (abs (- (car s) (car goal))) (abs (- (cdr s) (cdr goal)))))))

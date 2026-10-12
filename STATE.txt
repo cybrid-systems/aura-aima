@@ -1,0 +1,15 @@
+# aura-aima state (machine-readable, key=value)
+aura_repo=https://github.com/cybrid-systems/aura
+aura_tip=9058d36c4  # build-rel (RelWithDebInfo), Soft
+aura_face=soft  # AURA_SANDBOX=off AURA_PIPELINE_STRICT=0
+reference=https://github.com/aimacode/aima-python  # MIT, oracle only, checked at f104e03
+
+ch03_search=done   # BFS/DFS tree+graph, UCS, greedy, A*, DLS, IDS on Romania (Arad-Bucharest, Oradea-Neamt), Australia, 8-puzzle x3, 5x5 grid (+unreachable); paths, costs and InstrumentedProblem counters match aima-python
+ch05_games=next    # minimax, alpha-beta, tic-tac-toe, Fig 5.2 game
+ch06_csp=planned   # backtracking, MRV/LCV, forward checking, AC-3, min-conflicts; Australia map, n-queens
+ch17_mdp=planned   # value / policy iteration on the 4x3 world
+
+tests=tests/test_search_graph.aura tests/test_search_puzzle_grid.aura  # 112 checks (73 + 39)
+aura_issues_filed=4487,4488,4489
+aura_issues_fixed=
+aura_issues_open=4487,4488,4489

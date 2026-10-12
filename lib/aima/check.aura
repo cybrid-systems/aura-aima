@@ -1,0 +1,23 @@
+; aima/check.aura — tiny test oracle. Prints PASS/FAIL lines; scripts/run_tests.sh
+; fails the run when any FAIL line appears.
+
+(export check-near check-true check-equal)
+
+(define (check-near name actual expected tol)
+  (if (<= (abs (- actual expected)) tol)
+      (begin (display "PASS ") (display name) (newline) #t)
+      (begin (display "FAIL ") (display name) (display ": got ") (display actual)
+             (display " expected ") (display expected) (display " ±") (display tol)
+             (newline) #f)))
+
+(define (check-true name ok)
+  (if ok
+      (begin (display "PASS ") (display name) (newline) #t)
+      (begin (display "FAIL ") (display name) (newline) #f)))
+
+; equal? comparison; prints both sides on failure.
+(define (check-equal name actual expected)
+  (if (equal? actual expected)
+      (begin (display "PASS ") (display name) (newline) #t)
+      (begin (display "FAIL ") (display name) (display ": got ") (display actual)
+             (display " expected ") (display expected) (newline) #f)))

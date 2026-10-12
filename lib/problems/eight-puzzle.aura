@@ -1,0 +1,53 @@
+; problems/eight-puzzle.aura — AIMA §3.2 8-puzzle. State: vector of 9 tiles,
+; 0 = blank. Actions UP/DOWN/LEFT/RIGHT move the blank (aima-python EightPuzzle).
+; h = misplaced tiles counting the blank, as in aima-python.
+(require "aima/search" all:)
+(export make-eight-puzzle puzzle-key puzzle-solvable?)
+
+(define (blank-index s) (let lp ((i 0)) (if (= (vector-ref s i) 0) i (lp (+ i 1)))))
+
+(define (puzzle-actions s)
+  ; aima order: UP DOWN LEFT RIGHT
+  (let ((b (blank-index s)))
+    (append (if (< b 3) '() '(UP))
+            (if (> b 5) '() '(DOWN))
+            (if (= (remainder b 3) 0) '() '(LEFT))
+            (if (= (remainder b 3) 2) '() '(RIGHT)))))
+
+(define (delta a) (cond ((eq? a 'UP) -3) ((eq? a 'DOWN) 3) ((eq? a 'LEFT) -1) (else 1)))
+
+(define (puzzle-result s a)
+  (let* ((b (blank-index s)) (j (+ b (delta a))) (n (make-vector 9 0)))
+    (let lp ((i 0)) (if (< i 9) (begin (vector-set! n i (vector-ref s i)) (lp (+ i 1))) #f))
+    (vector-set! n b (vector-ref s j))
+    (vector-set! n j 0)
+    n))
+
+; Integer key (base 9) for explored sets — vector keys hash by identity in Aura.
+(define (puzzle-key s)
+  (let lp ((i 0) (k 0)) (if (< i 9) (lp (+ i 1) (+ (* k 9) (vector-ref s i))) k)))
+
+(define (misplaced s goal)
+  (let lp ((i 0) (m 0))
+    (if (< i 9) (lp (+ i 1) (if (= (vector-ref s i) (vector-ref goal i)) m (+ m 1))) m)))
+
+(define (puzzle-solvable? s)
+  (let lp ((i 0) (inv 0))
+    (if (< i 9)
+        (lp (+ i 1)
+            (let lj ((j (+ i 1)) (inv inv))
+              (if (< j 9)
+                  (lj (+ j 1) (if (and (> (vector-ref s i) (vector-ref s j))
+                                       (not (= (vector-ref s i) 0)) (not (= (vector-ref s j) 0)))
+                                  (+ inv 1) inv))
+                  inv)))
+        (= (remainder inv 2) 0))))
+
+(define (make-eight-puzzle initial . goal-opt)
+  (let ((goal (if (null? goal-opt) (vector 1 2 3 4 5 6 7 8 0) (car goal-opt))))
+    (make-problem initial
+                  (lambda (s) (equal? s goal))
+                  puzzle-actions
+                  puzzle-result
+                  (lambda (c s a s2) (+ c 1))
+                  (lambda (s) (misplaced s goal)))))

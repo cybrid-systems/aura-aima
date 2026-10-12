@@ -1,0 +1,20 @@
+; Romania route finding (AIMA Fig 3.1): compare searchers on Arad -> Bucharest.
+(require "aima/search" all:)
+(require "problems/graph" all:)
+
+(define (key s) s)
+(define (show name searcher)
+  (let ((p (make-graph-problem 'Arad 'Bucharest romania-map romania-locations)))
+    (let ((n (searcher p)))
+      (display name) (display ": ") (display (node-path-states n))
+      (display " cost=") (display (node-cost n))
+      (display " expanded=") (display (search-succs p))
+      (display " goal-tests=") (display (search-goal-tests p))
+      (display " generated=") (display (search-states p)) (newline))))
+
+(show "BFS   " (lambda (p) (breadth-first-graph-search p key)))
+(show "DFS   " (lambda (p) (depth-first-graph-search p key)))
+(show "UCS   " (lambda (p) (uniform-cost-search p key)))
+(show "Greedy" (lambda (p) (greedy-best-first-search p key)))
+(show "A*    " (lambda (p) (astar-search p key)))
+(show "IDS   " iterative-deepening-search)

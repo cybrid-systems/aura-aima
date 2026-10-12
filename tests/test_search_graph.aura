@@ -1,0 +1,53 @@
+;; Ch3 search on Romania / Australia maps: paths, costs and InstrumentedProblem
+;; counters (succs/goal-tests/states) must equal aima-python (tests/oracle/search_oracle.out).
+(require "aima/check" all:)
+(require "aima/search" all:)
+(require "problems/graph" all:)
+
+(define (key s) s)
+(define (run name searcher p path cost succs gt states)
+  (problem-reset! p)
+  (let ((n (searcher p)))
+    (check-equal (string-append name " path") (if n (node-path-states n) #f) path)
+    (check-equal (string-append name " cost") (if n (node-cost n) #f) cost)
+    (check-equal (string-append name " counters") (list (search-succs p) (search-goal-tests p) (search-states p)) (list succs gt states))))
+
+; --- Arad -> Bucharest
+(define p (make-graph-problem 'Arad 'Bucharest romania-map romania-locations))
+(run "Arad-Bucharest bfs-tree" breadth-first-tree-search p '(Arad Sibiu Fagaras Bucharest) 450 21 22 57)
+(run "Arad-Bucharest bfs-graph" (lambda (p) (breadth-first-graph-search p key)) p '(Arad Sibiu Fagaras Bucharest) 450 6 9 15)
+(run "Arad-Bucharest dfs-graph" (lambda (p) (depth-first-graph-search p key)) p '(Arad Timisoara Lugoj Mehadia Drobeta Craiova Pitesti Bucharest) 733 7 8 17)
+(run "Arad-Bucharest ucs" (lambda (p) (uniform-cost-search p key)) p '(Arad Sibiu Rimnicu Pitesti Bucharest) 418 12 13 30)
+(run "Arad-Bucharest greedy" (lambda (p) (greedy-best-first-search p key)) p '(Arad Sibiu Fagaras Bucharest) 450 3 4 9)
+(run "Arad-Bucharest astar" (lambda (p) (astar-search p key)) p '(Arad Sibiu Rimnicu Pitesti Bucharest) 418 5 6 15)
+(run "Arad-Bucharest ids" iterative-deepening-search p '(Arad Sibiu Fagaras Bucharest) 450 12 34 33)
+(run "Arad-Bucharest dls50" (lambda (p) (depth-limited-search p 50)) p '(Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Sibiu Fagaras Bucharest) 3900 62 89 160)
+
+; --- Oradea -> Neamt
+(define p (make-graph-problem 'Oradea 'Neamt romania-map romania-locations))
+(run "Oradea-Neamt bfs-tree" breadth-first-tree-search p '(Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt) 867 1033 1034 2925)
+(run "Oradea-Neamt bfs-graph" (lambda (p) (breadth-first-graph-search p key)) p '(Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt) 867 18 20 44)
+(run "Oradea-Neamt dfs-graph" (lambda (p) (depth-first-graph-search p key)) p '(Oradea Sibiu Rimnicu Pitesti Bucharest Urziceni Vaslui Iasi Neamt) 835 11 12 27)
+(run "Oradea-Neamt ucs" (lambda (p) (uniform-cost-search p key)) p '(Oradea Sibiu Rimnicu Pitesti Bucharest Urziceni Vaslui Iasi Neamt) 835 19 20 45)
+(run "Oradea-Neamt greedy" (lambda (p) (greedy-best-first-search p key)) p '(Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt) 867 8 9 22)
+(run "Oradea-Neamt astar" (lambda (p) (astar-search p key)) p '(Oradea Sibiu Rimnicu Pitesti Bucharest Urziceni Vaslui Iasi Neamt) 835 17 18 42)
+(run "Oradea-Neamt ids" iterative-deepening-search p '(Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt) 867 599 1633 1633)
+(run "Oradea-Neamt dls50" (lambda (p) (depth-limited-search p 50)) p '(Oradea Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt) 4002 839 2312 2382)
+
+; --- Q -> WA
+(define p (make-graph-problem 'Q 'WA australia-map '()))
+(run "Q-WA bfs-tree" breadth-first-tree-search p '(Q SA WA) 2 4 5 14)
+(run "Q-WA bfs-graph" (lambda (p) (breadth-first-graph-search p key)) p '(Q SA WA) 2 2 5 8)
+(run "Q-WA dfs-graph" (lambda (p) (depth-first-graph-search p key)) p '(Q NT WA) 2 4 5 11)
+(run "Q-WA ucs" (lambda (p) (uniform-cost-search p key)) p '(Q SA WA) 2 4 5 14)
+(run "Q-WA ids" iterative-deepening-search p '(Q SA WA) 2 3 8 11)
+(run "Q-WA dls50" (lambda (p) (depth-limited-search p 50)) p '(Q SA WA) 2 2 3 8)
+
+; straight-line heuristic spot checks (int(distance) of map coordinates)
+(check-equal "h(Arad)" ((problem-h (make-graph-problem 'Arad 'Bucharest romania-map romania-locations)) 'Arad) 350)
+(check-equal "h(Sibiu)" ((problem-h (make-graph-problem 'Arad 'Bucharest romania-map romania-locations)) 'Sibiu) 232)
+(check-equal "h(Fagaras)" ((problem-h (make-graph-problem 'Arad 'Bucharest romania-map romania-locations)) 'Fagaras) 154)
+(check-equal "h(Bucharest)" ((problem-h (make-graph-problem 'Arad 'Bucharest romania-map romania-locations)) 'Bucharest) 0)
+(check-equal "h(Neamt)" ((problem-h (make-graph-problem 'Arad 'Bucharest romania-map romania-locations)) 'Neamt) 210)
+(check-equal "solution actions" (node-solution (astar-search (make-graph-problem 'Arad 'Bucharest romania-map romania-locations) key)) '(Sibiu Rimnicu Pitesti Bucharest))
+(check-equal "unreachable T" (breadth-first-graph-search (make-graph-problem 'Q 'T australia-map '()) key) #f)

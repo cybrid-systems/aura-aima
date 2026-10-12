@@ -1,0 +1,69 @@
+## Arad Bucharest
+bfs-tree Arad Sibiu Fagaras Bucharest 450 21 22 57
+bfs-graph Arad Sibiu Fagaras Bucharest 450 6 9 15
+dfs-graph Arad Timisoara Lugoj Mehadia Drobeta Craiova Pitesti Bucharest 733 7 8 17
+ucs Arad Sibiu Rimnicu Pitesti Bucharest 418 12 13 30
+greedy Arad Sibiu Fagaras Bucharest 450 3 4 9
+astar Arad Sibiu Rimnicu Pitesti Bucharest 418 5 6 15
+ids Arad Sibiu Fagaras Bucharest 450 12 34 33
+dls50 Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Sibiu Fagaras Bucharest 3900 62 89 160
+## Oradea Neamt
+bfs-tree Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt 867 1033 1034 2925
+bfs-graph Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt 867 18 20 44
+dfs-graph Oradea Sibiu Rimnicu Pitesti Bucharest Urziceni Vaslui Iasi Neamt 835 11 12 27
+ucs Oradea Sibiu Rimnicu Pitesti Bucharest Urziceni Vaslui Iasi Neamt 835 19 20 45
+greedy Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt 867 8 9 22
+astar Oradea Sibiu Rimnicu Pitesti Bucharest Urziceni Vaslui Iasi Neamt 835 17 18 42
+ids Oradea Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt 867 599 1633 1633
+dls50 Oradea Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Zerind Arad Sibiu Fagaras Bucharest Urziceni Vaslui Iasi Neamt 4002 839 2312 2382
+## Q WA
+bfs-tree Q SA WA 2 4 5 14
+bfs-graph Q SA WA 2 2 5 8
+dfs-graph Q NT WA 2 4 5 11
+ucs Q SA WA 2 4 5 14
+ids Q SA WA 2 3 8 11
+dls50 Q SA WA 2 2 3 8
+## 8puzzle
+bfs-graph ['UP', 'LEFT', 'UP', 'LEFT', 'DOWN', 'RIGHT', 'RIGHT', 'DOWN'] 8 104 179 286
+ucs ['UP', 'LEFT', 'UP', 'LEFT', 'DOWN', 'RIGHT', 'RIGHT', 'DOWN'] 8 178 179 496
+astar ['UP', 'LEFT', 'UP', 'LEFT', 'DOWN', 'RIGHT', 'RIGHT', 'DOWN'] 8 22 23 64
+## neighbors
+Arad [('Zerind', 75), ('Sibiu', 140), ('Timisoara', 118)]
+Bucharest [('Urziceni', 85), ('Pitesti', 101), ('Giurgiu', 90), ('Fagaras', 211)]
+Craiova [('Drobeta', 120), ('Rimnicu', 146), ('Pitesti', 138)]
+Drobeta [('Mehadia', 75), ('Craiova', 120)]
+Eforie [('Hirsova', 86)]
+Fagaras [('Sibiu', 99), ('Bucharest', 211)]
+Hirsova [('Urziceni', 98), ('Eforie', 86)]
+Iasi [('Vaslui', 92), ('Neamt', 87)]
+Lugoj [('Timisoara', 111), ('Mehadia', 70)]
+Oradea [('Zerind', 71), ('Sibiu', 151)]
+Pitesti [('Rimnicu', 97), ('Bucharest', 101), ('Craiova', 138)]
+Rimnicu [('Sibiu', 80), ('Craiova', 146), ('Pitesti', 97)]
+Urziceni [('Vaslui', 142), ('Bucharest', 85), ('Hirsova', 98)]
+Zerind [('Arad', 75), ('Oradea', 71)]
+Sibiu [('Arad', 140), ('Fagaras', 99), ('Oradea', 151), ('Rimnicu', 80)]
+Timisoara [('Arad', 118), ('Lugoj', 111)]
+Giurgiu [('Bucharest', 90)]
+Mehadia [('Drobeta', 75), ('Lugoj', 70)]
+Vaslui [('Iasi', 92), ('Urziceni', 142)]
+Neamt [('Iasi', 87)]
+## loc {'Arad': (91, 492), 'Bucharest': (400, 327), 'Craiova': (253, 288), 'Drobeta': (165, 299), 'Eforie': (562, 293), 'Fagaras': (305, 449), 'Giurgiu': (375, 270), 'Hirsova': (534, 350), 'Iasi': (473, 506), 'Lugoj': (165, 379), 'Mehadia': (168, 339), 'Neamt': (406, 537), 'Oradea': (131, 571), 'Pitesti': (320, 368), 'Rimnicu': (233, 410), 'Sibiu': (207, 457), 'Timisoara': (94, 410), 'Urziceni': (456, 350), 'Vaslui': (509, 444), 'Zerind': (108, 531)}
+T []
+SA [('WA', 1), ('NT', 1), ('Q', 1), ('NSW', 1), ('V', 1)]
+NT [('WA', 1), ('Q', 1), ('SA', 1)]
+NSW [('Q', 1), ('V', 1), ('SA', 1)]
+WA [('SA', 1), ('NT', 1)]
+Q [('SA', 1), ('NT', 1), ('NSW', 1)]
+V [('SA', 1), ('NSW', 1)]
+## grid
+bfs-graph (4, 0) ([(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 4), (2, 4), (3, 4), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0)], 12) 19 21 52
+bfs-graph (4, 4) None 22 22 68
+ucs (4, 0) ([(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 4), (2, 4), (3, 4), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0)], 12) 20 21 54
+ucs (4, 4) None 22 22 68
+astar (4, 0) ([(0, 0), (1, 0), (1, 1), (1, 2), (1, 3), (1, 4), (2, 4), (3, 4), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0)], 12) 20 21 54
+astar (4, 4) None 22 22 68
+dfs-graph (4, 0) ([(0, 0), (1, 0), (1, 1), (1, 2), (1, 3), (1, 4), (2, 4), (3, 4), (3, 3), (3, 2), (3, 1), (3, 0), (4, 0)], 12) 12 13 32
+dfs-graph (4, 4) None 22 22 68
+## ep2
+['RIGHT', 'RIGHT'] 2 3 5
