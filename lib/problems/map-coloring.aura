@@ -1,0 +1,37 @@
+; problems/map-coloring.aura — MapColoringCSP (aima-python): regions must differ
+; from adjacent regions. The spec is a list of (Region neighbour ...) entries like
+; parse_neighbors' "SA: WA NT Q NSW V; NT: WA Q; ..."; edges are made symmetric and
+; regions are numbered in first-seen order (Python defaultdict insertion order).
+; Like aima-python, a region with no neighbours (Tasmania in "T: ") never appears.
+(require "aima/csp" all:)
+(require "aima/list" all:)
+(export make-map-coloring-csp australia-spec region-index edges first-seen)
+
+(define australia-spec '((SA WA NT Q NSW V) (NT WA Q) (NSW Q V) (T)))
+
+; Returns -1 when absent: in Soft 0 is falsy (aura#4491), so an index cannot double as a truth value.
+(define (index-of x xs) (let lp ((xs xs) (i 0)) (cond ((null? xs) -1) ((eq? (car xs) x) i) (else (lp (cdr xs) (+ i 1))))))
+(define (region-index c r) (index-of r (vector->list (csp-names c))))
+
+;; Built without set!/set-car! on internal defines: that version came out
+;; corrupted after other CSP work had run; the cause was the builtin map (aura#4492).
+(define (edges spec)   ; directed edges in parse_neighbors order: A->B then B->A
+  (let lp ((sp spec) (acc (list)))
+    (if (null? sp) (reverse acc)
+        (lp (cdr sp)
+            (let lb ((bs (cdr (car sp))) (acc acc))
+              (if (null? bs) acc (lb (cdr bs) (cons (list (car bs) (car (car sp))) (cons (list (car (car sp)) (car bs)) acc)))))))))
+(define (first-seen es)
+  (let lp ((es es) (names (list)))
+    (if (null? es) (reverse names)
+        (lp (cdr es) (if (>= (index-of (car (car es)) names) 0) names (cons (car (car es)) names))))))
+(define (neighbors-of a es)
+  (let lp ((es es) (acc (list)))
+    (cond ((null? es) (reverse acc))
+          ((eq? (car (car es)) a) (lp (cdr es) (cons (cadr (car es)) acc)))
+          (else (lp (cdr es) acc)))))
+(define (make-map-coloring-csp colors spec)
+  (let* ((es (edges spec)) (names (first-seen es)))
+    (make-csp (list->vector names) (make-vector (length names) colors)
+              (list->vector (lmap (lambda (a) (lmap (lambda (b) (index-of b names)) (neighbors-of a es))) names))
+              (lambda (A a B b) (not (eq? a b))))))

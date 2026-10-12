@@ -1,0 +1,236 @@
+; aima/csp.aura — constraint satisfaction (AIMA ch. 6): backtracking search
+; (Fig 6.5) with MRV / LCV / forward checking, AC-3 (Fig 6.3), min-conflicts
+; (Fig 6.8). Control flow follows aima-python csp.py (MIT) so solutions and the
+; nassigns / nchecks counters match; MRV ties are broken by the first
+; minimum (aima-python: at random); min-conflicts ties use a seeded LCG.
+;
+; Variables are indices 0..n-1. CSP = vector:
+;   0 names       vector of display names
+;   1 domains     vector of value lists
+;   2 neighbors   vector of index lists
+;   3 constraint  (A a B b) -> bool       (counted in nchecks)
+;   4 queens      #f, or (vector rows downs ups) for the O(1) n-queens counts
+;   5 curr        #f, or vector of current domains (lists) once pruning starts
+;   6 nassigns    7 nchecks
+; Assignment = (vector values count); an unassigned slot holds UNSET.
+(export make-csp make-nqueens-csp csp-n csp-names csp-nassigns csp-nchecks
+        csp-curr-domains csp-set-domain! csp-support-pruning!
+        new-assignment assignment-ref assignment->list
+        csp-nconflicts csp-goal?
+        first-unassigned-variable mrv unordered-domain-values lcv
+        no-inference forward-checking backtracking-search
+        ac3 min-conflicts make-rng rng-int!)
+(require "aima/list" all:)
+
+(define UNSET (list 'unset))
+(define (make-csp names domains neighbors constraint)
+  (vector names domains neighbors constraint #f #f 0 0))
+(define (csp-n c) (vector-length (vector-ref c 0)))
+(define (csp-names c) (vector-ref c 0))
+(define (csp-nassigns c) (vector-ref c 6))
+(define (csp-nchecks c) (vector-ref c 7))
+(define (csp-curr-domains c) (vector-ref c 5))
+(define (neighbors c v) (vector-ref (vector-ref c 2) v))
+(define (domain c v) (vector-ref (vector-ref c 1) v))
+
+(define (constraint? c A a B b)
+  (vector-set! c 7 (+ (vector-ref c 7) 1))
+  ((vector-ref c 3) A a B b))
+
+; --- assignments
+(define (new-assignment c) (vector (make-vector (csp-n c) UNSET) 0))
+(define (assigned? asg v) (not (eq? (vector-ref (vector-ref asg 0) v) UNSET)))
+(define (assignment-ref asg v) (vector-ref (vector-ref asg 0) v))
+(define (asg-count asg) (vector-ref asg 1))
+(define (assignment->list asg) (vector->list (vector-ref asg 0)))
+(define (asg-put! asg v x)
+  (if (assigned? asg v) #f (vector-set! asg 1 (+ (vector-ref asg 1) 1)))
+  (vector-set! (vector-ref asg 0) v x))
+(define (asg-del! asg v)
+  (if (assigned? asg v)
+      (begin (vector-set! asg 1 (- (vector-ref asg 1) 1)) (vector-set! (vector-ref asg 0) v UNSET))
+      #f))
+
+; --- n-queens counters (NQueensCSP.record_conflict)
+(define (record-conflict! c v x delta)
+  (let ((q (vector-ref c 4)) (n (csp-n c)))
+    (let ((rows (vector-ref q 0)) (downs (vector-ref q 1)) (ups (vector-ref q 2)))
+      (vector-set! rows x (+ (vector-ref rows x) delta))
+      (vector-set! downs (+ v x) (+ (vector-ref downs (+ v x)) delta))
+      (vector-set! ups (+ (- v x) n -1) (+ (vector-ref ups (+ (- v x) n -1)) delta)))))
+
+(define (csp-assign! c v x asg)
+  (if (vector-ref c 4)
+      (let ((old (if (assigned? asg v) (assignment-ref asg v) UNSET)))
+        (if (equal? old x) #f
+            (begin
+              (if (eq? old UNSET) #f (record-conflict! c v old -1))
+              (record-conflict! c v x 1)
+              (asg-put! asg v x)
+              (vector-set! c 6 (+ (vector-ref c 6) 1)))))
+      (begin (asg-put! asg v x) (vector-set! c 6 (+ (vector-ref c 6) 1)))))
+
+(define (csp-unassign! c v asg)
+  (if (and (vector-ref c 4) (assigned? asg v)) (record-conflict! c v (assignment-ref asg v) -1) #f)
+  (asg-del! asg v))
+
+(define (count-if p xs) (let lp ((xs xs) (k 0)) (if (null? xs) k (lp (cdr xs) (if (p (car xs)) (+ k 1) k)))))
+
+(define (csp-nconflicts c v x asg)
+  (if (vector-ref c 4)
+      (let* ((q (vector-ref c 4)) (n (csp-n c))
+             (k (+ (vector-ref (vector-ref q 0) x) (vector-ref (vector-ref q 1) (+ v x))
+                   (vector-ref (vector-ref q 2) (+ (- v x) n -1)))))
+        (if (and (assigned? asg v) (equal? (assignment-ref asg v) x)) (- k 3) k))
+      (count-if (lambda (v2) (and (assigned? asg v2) (not (constraint? c v x v2 (assignment-ref asg v2)))))
+                (neighbors c v))))
+
+(define (csp-goal? c asg)
+  (and (= (asg-count asg) (csp-n c))
+       (let lp ((v 0))
+         (cond ((= v (csp-n c)) #t)
+               ((= 0 (csp-nconflicts c v (assignment-ref asg v) asg)) (lp (+ v 1)))
+               (else #f)))))
+
+(define (count-lost-values c v x asg)
+  (let lp ((ns (neighbors c v)) (k 0))
+    (if (null? ns) k
+        (lp (cdr ns)
+            (if (assigned? asg (car ns)) k
+                (+ k (count-if (lambda (d) (not (constraint? c v x (car ns) d))) (domain c (car ns)))))))))
+
+; --- pruning (curr_domains); lists are edited exactly like Python's
+; list.remove / list.append so that value order after restore matches.
+(define (csp-support-pruning! c)
+  (if (vector-ref c 5) #f
+      (let ((cd (make-vector (csp-n c) '())))
+        (let lp ((v 0)) (if (< v (csp-n c)) (begin (vector-set! cd v (domain c v)) (lp (+ v 1))) #f))
+        (vector-set! c 5 cd))))
+(define (curr c v) (vector-ref (vector-ref c 5) v))
+(define (csp-set-domain! c v xs) (csp-support-pruning! c) (vector-set! (vector-ref c 5) v xs))
+(define (remove-first x xs)
+  (cond ((null? xs) '()) ((equal? (car xs) x) (cdr xs)) (else (cons (car xs) (remove-first x (cdr xs))))))
+
+; returns removals as a box: (vector list-of-(var value) in order)
+(define (suppose! c v x)
+  (csp-support-pruning! c)
+  (let ((rem (vector '())))
+    (for-each (lambda (a) (if (equal? a x) #f (vector-set! rem 0 (cons (list v a) (vector-ref rem 0)))))
+              (curr c v))
+    (vector-set! (vector-ref c 5) v (list x))
+    rem))
+(define (prune! c v x rem)
+  (vector-set! (vector-ref c 5) v (remove-first x (curr c v)))
+  (if rem (vector-set! rem 0 (cons (list v x) (vector-ref rem 0))) #f))
+(define (restore! c rem)
+  (for-each (lambda (r) (vector-set! (vector-ref c 5) (car r) (append (curr c (car r)) (list (cadr r)))))
+            (reverse (vector-ref rem 0))))
+(define (choices c v) (if (vector-ref c 5) (curr c v) (domain c v)))
+
+; --- variable / value ordering, inference (aima-python names)
+(define (unassigned-vars c asg)
+  (let lp ((v (- (csp-n c) 1)) (acc '())) (if (< v 0) acc (lp (- v 1) (if (assigned? asg v) acc (cons v acc))))))
+(define (first-unassigned-variable asg c) (car (unassigned-vars c asg)))
+(define (num-legal-values c v asg)
+  (if (vector-ref c 5) (length (curr c v))
+      (count-if (lambda (x) (= 0 (csp-nconflicts c v x asg))) (domain c v))))
+(define (argmin xs key)   ; first minimum, like Python min(..., key=)
+  (let lp ((xs (cdr xs)) (best (car xs)) (bk (key (car xs))))
+    (if (null? xs) best (let ((k (key (car xs)))) (if (< k bk) (lp (cdr xs) (car xs) k) (lp (cdr xs) best bk))))))
+(define (mrv asg c) (argmin (unassigned-vars c asg) (lambda (v) (num-legal-values c v asg))))
+(define (unordered-domain-values v asg c) (choices c v))
+; stable sort by key (Python sorted is stable): insertion sort on (key . value)
+(define (stable-sort-by xs key)
+  (define (ins p sorted)
+    (cond ((null? sorted) (list p)) ((< (car p) (car (car sorted))) (cons p sorted)) (else (cons (car sorted) (ins p (cdr sorted))))))
+  (lmap cdr (let lp ((xs xs) (acc '())) (if (null? xs) acc (lp (cdr xs) (ins (cons (key (car xs)) (car xs)) acc))))))
+(define (lcv v asg c) (stable-sort-by (choices c v) (lambda (x) (count-lost-values c v x asg))))
+(define (no-inference c v x asg rem) #t)
+(define (forward-checking c v x asg rem)
+  (csp-support-pruning! c)
+  (let lp ((bs (neighbors c v)))
+    (cond ((null? bs) #t)
+          ((assigned? asg (car bs)) (lp (cdr bs)))
+          (else
+           (let ((b (car bs)))
+             (for-each (lambda (y) (if (constraint? c v x b y) #f (prune! c b y rem))) (curr c b))
+             (if (null? (curr c b)) #f (lp (cdr bs))))))))
+
+; --- Fig 6.5; returns an assignment or #f
+(define (backtracking-search c select order inference)
+  (define asg (new-assignment c))
+  (define (backtrack)
+    (if (= (asg-count asg) (csp-n c)) asg
+        (let ((v (select asg c)))
+          (let lp ((xs (order v asg c)))
+            (if (null? xs) (begin (csp-unassign! c v asg) #f)
+                (let ((x (car xs)))
+                  (if (= 0 (csp-nconflicts c v x asg))
+                      (begin
+                        (csp-assign! c v x asg)
+                        (let* ((rem (suppose! c v x))
+                               (r (if (inference c v x asg rem) (backtrack) #f)))
+                          (if r r (begin (restore! c rem) (lp (cdr xs))))))
+                      (lp (cdr xs)))))))))
+  (backtrack))
+
+; --- Fig 6.3 AC-3. Arcs are processed FIFO (aima-python orders by domain size;
+; the fixpoint domains are the same). Returns #t / #f (inconsistent).
+(define (revise! c xi xj rem)
+  (let lp ((xs (curr c xi)) (revised #f))
+    (if (null? xs) revised
+        (let ((x (car xs)))
+          (if (let any ((ys (curr c xj))) (cond ((null? ys) #f) ((constraint? c xi x xj (car ys)) #t) (else (any (cdr ys)))))
+              (lp (cdr xs) revised)
+              (begin (prune! c xi x rem) (lp (cdr xs) #t)))))))
+(define (ac3 c)
+  (csp-support-pruning! c)
+  (let ((q (let lp ((v (- (csp-n c) 1)) (acc '()))
+             (if (< v 0) acc (lp (- v 1) (append (lmap (lambda (k) (list v k)) (neighbors c v)) acc))))))
+    (let loop ((q q))
+      (if (null? q) #t
+          (let ((xi (car (car q))) (xj (cadr (car q))))
+            (if (revise! c xi xj #f)
+                (if (null? (curr c xi)) #f
+                    (loop (append (cdr q)
+                                  (let add ((ks (neighbors c xi)) (acc '()))
+                                    (cond ((null? ks) (reverse acc))
+                                          ((or (= (car ks) xj) (member (list (car ks) xi) q)) (add (cdr ks) acc))
+                                          (else (add (cdr ks) (cons (list (car ks) xi) acc))))))))
+                (loop (cdr q))))))))
+
+; --- min-conflicts (Fig 6.8) with a seeded LCG; returns an assignment or #f
+(define (make-rng seed) (vector seed))
+(define (rng-int! r n)   ; 0..n-1, 31-bit LCG (no overflow in 63-bit ints)
+  (let ((s (remainder (+ (* (vector-ref r 0) 1103515245) 12345) 2147483648)))
+    (vector-set! r 0 s) (remainder (quotient s 65536) n)))
+;; Value ties must be broken at random here: with first-minimum ties
+;; min-conflicts cycles and never solves 8-queens (checked in aima-python too).
+(define (min-conflicts-value c v asg rng)
+  (let lp ((xs (domain c v)) (best (list)) (bk 1000000000))
+    (if (null? xs) (list-ref best (rng-int! rng (length best)))
+        (let ((k (csp-nconflicts c v (car xs) asg)))
+          (cond ((< k bk) (lp (cdr xs) (list (car xs)) k))
+                ((= k bk) (lp (cdr xs) (append best (list (car xs))) bk))
+                (else (lp (cdr xs) best bk)))))))
+(define (conflicted-vars c asg)
+  (let lp ((v (- (csp-n c) 1)) (acc '()))
+    (if (< v 0) acc (lp (- v 1) (if (> (csp-nconflicts c v (assignment-ref asg v) asg) 0) (cons v acc) acc)))))
+(define (min-conflicts c max-steps rng)
+  (define asg (new-assignment c))
+  (let lp ((v 0)) (if (< v (csp-n c)) (begin (csp-assign! c v (min-conflicts-value c v asg rng) asg) (lp (+ v 1))) #f))
+  (let step ((i 0))
+    (if (>= i max-steps) #f
+        (let ((cv (conflicted-vars c asg)))
+          (if (null? cv) asg
+              (let ((v (list-ref cv (rng-int! rng (length cv)))))
+                (csp-assign! c v (min-conflicts-value c v asg rng) asg)
+                (step (+ i 1))))))))
+
+; --- n-queens (NQueensCSP): neighbours are all columns (including itself)
+(define (make-nqueens-csp n)
+  (let* ((all (let lp ((i (- n 1)) (acc '())) (if (< i 0) acc (lp (- i 1) (cons i acc)))))
+         (c (make-csp (list->vector all) (make-vector n all) (make-vector n all)
+                      (lambda (A a B b) (or (= A B) (and (not (= a b)) (not (= (+ A a) (+ B b))) (not (= (- A a) (- B b)))))))))
+    (vector-set! c 4 (vector (make-vector n 0) (make-vector (- (* 2 n) 1) 0) (make-vector (- (* 2 n) 1) 0)))
+    c))

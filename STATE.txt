@@ -6,10 +6,10 @@ reference=https://github.com/aimacode/aima-python  # MIT, oracle only, checked a
 
 ch03_search=done   # BFS/DFS tree+graph, UCS, greedy, A*, DLS, IDS on Romania (Arad-Bucharest, Oradea-Neamt), Australia, 8-puzzle x3, 5x5 grid (+unreachable); paths, costs and InstrumentedProblem counters match aima-python
 ch05_games=done    # minimax, alpha-beta (to leaves) on Fig 5.2 (A-D) and tic-tac-toe positions from aima-python tests + full empty-board game; moves and result() counts match aima-python
-ch06_csp=next   # backtracking, MRV/LCV, forward checking, AC-3, min-conflicts; Australia map, n-queens
-ch17_mdp=planned   # value / policy iteration on the 4x3 world
+ch06_csp=done     # backtracking {first,MRV}x{unordered,LCV}x{none,FC} on Australia / 8,4,3-queens (solution + nassigns/nchecks match aima-python), AC-3 fixpoints, min-conflicts (seeded) validity
+ch17_mdp=next   # value / policy iteration on the 4x3 world
 
-tests=tests/test_search_graph.aura tests/test_search_puzzle_grid.aura tests/test_games.aura tests/test_games_full.aura  # 151 checks (73 + 39 + 36 + 3)
-aura_issues_filed=4487,4488,4489,4490
+tests=tests/test_search_graph.aura tests/test_search_puzzle_grid.aura tests/test_games.aura tests/test_games_full.aura tests/test_csp_backtracking.aura tests/test_csp_ac3_minconflicts.aura  # 254 checks (73 + 39 + 36 + 3 + 89 + 14)
+aura_issues_filed=4487,4488,4489,4490,4491,4492
 aura_issues_fixed=
-aura_issues_open=4487,4488,4489,4490
+aura_issues_open=4487,4488,4489,4490,4491,4492

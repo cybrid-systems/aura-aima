@@ -1,0 +1,38 @@
+aus vars ['SA', 'WA', 'NT', 'Q', 'NSW', 'V']
+aus neighbors {'SA': ['WA', 'NT', 'Q', 'NSW', 'V'], 'WA': ['SA', 'NT'], 'NT': ['SA', 'WA', 'Q'], 'Q': ['SA', 'NT', 'NSW'], 'NSW': ['SA', 'Q', 'V'], 'V': ['SA', 'NSW']}
+aus first unordered none ['R', 'G', 'B', 'G', 'B', 'G'] 6 40
+aus first unordered fc ['R', 'G', 'B', 'G', 'B', 'G'] 6 50
+aus first lcv none ['R', 'G', 'B', 'G', 'B', 'G'] 6 121
+aus first lcv fc ['R', 'G', 'B', 'G', 'B', 'G'] 6 110
+aus mrv unordered none ['R', 'G', 'B', 'G', 'B', 'G'] 6 40
+aus mrv unordered fc ['R', 'G', 'B', 'G', 'B', 'G'] 6 50
+aus mrv lcv none ['R', 'G', 'B', 'G', 'B', 'G'] 6 121
+aus mrv lcv fc ['R', 'G', 'B', 'G', 'B', 'G'] 6 110
+q8 first unordered none [0, 4, 7, 5, 2, 6, 1, 3] 116 0
+q8 first unordered fc [0, 4, 7, 5, 2, 6, 1, 3] 89 807
+q8 first lcv none [0, 4, 7, 5, 2, 6, 1, 3] 128 26176
+q8 first lcv fc [0, 4, 7, 5, 2, 6, 1, 3] 104 5268
+q8 mrv unordered none [0, 4, 7, 5, 2, 6, 1, 3] 116 0
+q8 mrv unordered fc [0, 4, 7, 5, 2, 6, 1, 3] 75 777
+q8 mrv lcv none [0, 4, 7, 5, 2, 6, 1, 3] 128 26176
+q8 mrv lcv fc [0, 4, 7, 5, 2, 6, 1, 3] 89 4675
+q4 first unordered none [1, 3, 0, 2] 8 0
+q4 first unordered fc [1, 3, 0, 2] 8 38
+q4 first lcv none [1, 3, 0, 2] 8 288
+q4 first lcv fc [1, 3, 0, 2] 8 158
+q4 mrv unordered none [1, 3, 0, 2] 8 0
+q4 mrv unordered fc [1, 3, 0, 2] 8 38
+q4 mrv lcv none [1, 3, 0, 2] 8 288
+q4 mrv lcv fc [1, 3, 0, 2] 8 158
+q3 first unordered none None 5 0
+q3 first unordered fc None 5 17
+q3 first lcv none None 5 99
+q3 first lcv fc None 5 56
+q3 mrv unordered none None 5 0
+q3 mrv unordered fc None 5 17
+q3 mrv lcv none None 5 99
+q3 mrv lcv fc None 5 56
+ac3 plain True {'SA': ['B', 'G', 'R'], 'WA': ['B', 'G', 'R'], 'NT': ['B', 'G', 'R'], 'Q': ['B', 'G', 'R'], 'NSW': ['B', 'G', 'R'], 'V': ['B', 'G', 'R']}
+ac3 WA=R,SA=G True {'SA': ['G'], 'WA': ['R'], 'NT': ['B'], 'Q': ['R'], 'NSW': ['B'], 'V': ['R']}
+ac3 WA=R,NT=G,Q=R True {'SA': ['B'], 'WA': ['R'], 'NT': ['G'], 'Q': ['R'], 'NSW': ['G'], 'V': ['R']}
+ac3 triangle-2col True
