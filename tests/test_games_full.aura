@@ -1,0 +1,9 @@
+;; Ch5 games, full 3x3 tic-tac-toe from the empty board (slow: ~18k states).
+(require "aima/check" all:)
+(require "aima/games" all:)
+(require "problems/tictactoe" all:)
+(define ttt (make-tictactoe 3 3 3))
+(define m (alpha-beta-search (game-initial ttt) ttt))
+(check-equal "empty board alphabeta move" m (cons 1 1))
+(check-equal "empty board alphabeta results" (game-results ttt) 18296)
+(check-equal "ttt play ab vs ab is a draw" (play-game (make-tictactoe 3 3 3) alpha-beta-player alpha-beta-player) 0)

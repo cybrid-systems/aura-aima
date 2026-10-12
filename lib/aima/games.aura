@@ -1,0 +1,83 @@
+; aima/games.aura — adversarial search (AIMA ch. 5): minimax (Fig 5.3) and
+; alpha-beta (Fig 5.7), searching to the leaves. Control flow follows
+; aima-python games.py (MIT) so chosen moves and result() counts match.
+;
+; Game = (vector initial actions result utility terminal? to-move stats)
+;   actions   : state -> list of moves (order fixes tie-breaking: first best wins)
+;   result    : state move -> state
+;   utility   : state player -> number
+;   terminal? : state -> bool
+;   to-move   : state -> player
+;   stats     : (vector results) — number of result() calls, like the search counters
+(export make-game game-initial game-results game-reset! game-to-move game-result
+        game-terminal? game-utility game-actions
+        minimax-decision alpha-beta-search play-game
+        minimax-player alpha-beta-player)
+
+(define (make-game initial actions result utility terminal? to-move)
+  (vector initial actions result utility terminal? to-move (vector 0)))
+(define (game-initial g) (vector-ref g 0))
+(define (game-actions g s) ((vector-ref g 1) s))
+(define (game-result g s m)
+  (let ((st (vector-ref g 6))) (vector-set! st 0 (+ (vector-ref st 0) 1)))
+  ((vector-ref g 2) s m))
+(define (game-utility g s p) ((vector-ref g 3) s p))
+(define (game-terminal? g s) ((vector-ref g 4) s))
+(define (game-to-move g s) ((vector-ref g 5) s))
+(define (game-results g) (vector-ref (vector-ref g 6) 0))
+(define (game-reset! g) (vector-set! g 6 (vector 0)))
+
+; Python's -inf / +inf: utilities are small ints, so a big sentinel is exact.
+(define NEG-INF -1000000000)
+(define POS-INF 1000000000)
+
+; max(actions, key=...) : first action with the strictly largest key.
+(define (argmax xs key)
+  (let lp ((xs (cdr xs)) (best (car xs)) (bv (key (car xs))))
+    (if (null? xs) best
+        (let ((v (key (car xs))))
+          (if (> v bv) (lp (cdr xs) (car xs) v) (lp (cdr xs) best bv))))))
+
+(define (minimax-decision s g)
+  (let ((player (game-to-move g s)))
+    (define (max-value s)
+      (if (game-terminal? g s) (game-utility g s player)
+          (let lp ((as (game-actions g s)) (v NEG-INF))
+            (if (null? as) v (lp (cdr as) (max v (min-value (game-result g s (car as)))))))))
+    (define (min-value s)
+      (if (game-terminal? g s) (game-utility g s player)
+          (let lp ((as (game-actions g s)) (v POS-INF))
+            (if (null? as) v (lp (cdr as) (min v (max-value (game-result g s (car as)))))))))
+    (argmax (game-actions g s) (lambda (a) (min-value (game-result g s a))))))
+
+(define (alpha-beta-search s g)
+  (let ((player (game-to-move g s)))
+    (define (max-value s alpha beta)
+      (if (game-terminal? g s) (game-utility g s player)
+          (let lp ((as (game-actions g s)) (v NEG-INF) (alpha alpha))
+            (if (null? as) v
+                (let ((v (max v (min-value (game-result g s (car as)) alpha beta))))
+                  (if (>= v beta) v (lp (cdr as) v (max alpha v))))))))
+    (define (min-value s alpha beta)
+      (if (game-terminal? g s) (game-utility g s player)
+          (let lp ((as (game-actions g s)) (v POS-INF) (beta beta))
+            (if (null? as) v
+                (let ((v (min v (max-value (game-result g s (car as)) alpha beta))))
+                  (if (<= v alpha) v (lp (cdr as) v (min beta v))))))))
+    (let lp ((as (game-actions g s)) (best NEG-INF) (best-a #f))
+      (if (null? as) best-a
+          (let ((v (min-value (game-result g s (car as)) best POS-INF)))
+            (if (> v best) (lp (cdr as) v (car as)) (lp (cdr as) best best-a)))))))
+
+(define (minimax-player g s) (minimax-decision s g))
+(define (alpha-beta-player g s) (alpha-beta-search s g))
+
+; Game.play_game: players move in turn until a terminal state; utility for the
+; player to move in the initial state.
+(define (play-game g . players)
+  (let lp ((s (game-initial g)) (ps players))
+    (if (null? ps) (lp s players)
+        (let ((s2 (game-result g s ((car ps) g s))))
+          (if (game-terminal? g s2)
+              (game-utility g s2 (game-to-move g (game-initial g)))
+              (lp s2 (cdr ps)))))))

@@ -16,8 +16,8 @@ numbers are copied into the Aura tests.
 | Part | AIMA | State |
 |---|---|---|
 | Search | ch. 3 | **done** — BFS/DFS (tree + graph), UCS, greedy, A*, DLS, IDS; 8-puzzle, Romania, Australia, grid |
-| Games | ch. 5 | next |
-| CSP | ch. 6 | planned |
+| Games | ch. 5 | **done** — minimax, alpha-beta, Fig 5.2 tree, tic-tac-toe (positions + full game) |
+| CSP | ch. 6 | next |
 | MDP | ch. 17 | planned |
 
 See `STATE.txt` (machine-readable) and `IMPROVEMENTS.md` (Aura notes).
@@ -37,7 +37,8 @@ scripts/run.sh chapters/ch03_search/romania.aura
 
 ```
 lib/aima/        search.aura (Problem/Node/searchers), pq.aura (heap), check.aura
-lib/problems/    graph.aura (Romania, Australia), eight-puzzle.aura, grid.aura
+lib/aima/        games.aura (Game, minimax, alpha-beta, play-game)
+lib/problems/    graph.aura (Romania, Australia), eight-puzzle.aura, grid.aura, fig52.aura, tictactoe.aura
 chapters/        per-chapter demos + notes
 tests/           test_*.aura; tests/oracle/ aima-python scripts and their output
 ```
@@ -50,7 +51,7 @@ tests/           test_*.aura; tests/oracle/ aima-python scripts and their output
 
 参照实现是 aima-python（MIT），**没有拷贝它的代码**：算法按书里的伪代码自己写，控制流跟 aima-python 对齐，这样结果能逐项对上。期望值由 `tests/oracle/*.py` 在 aima-python 仓库里跑出来，再抄进 Aura 测试。
 
-进度：第 3 章搜索已完成（BFS/DFS 树/图搜索、UCS、贪心、A*、DLS、IDS；8 数码、罗马尼亚、澳大利亚地图、网格）。测试不只对路径和代价，还对 aima-python `InstrumentedProblem` 的三个计数（扩展数 / 目标测试数 / 生成状态数），这样边界顺序和平局规则也被钉死。下一步是第 5 章博弈。
+进度：第 3 章搜索已完成（BFS/DFS 树/图搜索、UCS、贪心、A*、DLS、IDS；8 数码、罗马尼亚、澳大利亚地图、网格）。测试不只对路径和代价，还对 aima-python `InstrumentedProblem` 的三个计数（扩展数 / 目标测试数 / 生成状态数），这样边界顺序和平局规则也被钉死。第 5 章博弈也已完成：minimax、alpha-beta、图 5.2 博弈树、井字棋（残局 + 空棋盘整局），对的是走法和 result() 调用次数。下一步是第 6 章 CSP。
 
 运行方式见上：Soft 模式（`AURA_SANDBOX=off AURA_PIPELINE_STRICT=0`），用 `AURA_BIN` 指向 Aura 可执行文件。
 

@@ -1,0 +1,13 @@
+; Minimax vs alpha-beta on a mid-game tic-tac-toe position (aima-python test case).
+(require "aima/games" all:)
+(require "problems/tictactoe" all:)
+
+(define g (make-tictactoe 3 3 3))
+(define s (ttt-state 'X (list (cons 1 1) (cons 3 1)) (list (cons 2 2) (cons 3 1))))
+(define (show name search)
+  (game-reset! g)
+  (let ((m (search s g)))
+    (display name) (display ": move ") (display m)
+    (display ", states generated ") (display (game-results g)) (newline)))
+(show "minimax   " minimax-decision)
+(show "alpha-beta" alpha-beta-search)

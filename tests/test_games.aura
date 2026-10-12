@@ -1,0 +1,49 @@
+;; Ch5 games: Fig 5.2 tree and tic-tac-toe positions. Moves and result() counts
+;; Expected values that hold booleans use (list ...): quoted #t/#f read as 1/0 (aura#4490).
+;; must equal aima-python (tests/oracle/games_oracle.out).
+(require "aima/check" all:)
+(require "aima/games" all:)
+(require "problems/fig52" all:)
+(require "problems/tictactoe" all:)
+
+(define (run name search s g move results)
+  (game-reset! g)
+  (let ((m (search s g)))
+    (check-equal (string-append name " move") m move)
+    (check-equal (string-append name " results") (game-results g) results)))
+
+; --- Fig 5.2: MAX at A, MIN at B/C/D; minimax value of A is 3
+(define f52 (make-fig52-game))
+(run "fig52 A minimax" minimax-decision 'A f52 'a1 12)
+(run "fig52 A alphabeta" alpha-beta-search 'A f52 'a1 10)
+(run "fig52 B minimax" minimax-decision 'B f52 'b1 3)
+(run "fig52 B alphabeta" alpha-beta-search 'B f52 'b1 3)
+(run "fig52 C minimax" minimax-decision 'C f52 'c1 3)
+(run "fig52 C alphabeta" alpha-beta-search 'C f52 'c1 3)
+(run "fig52 D minimax" minimax-decision 'D f52 'd3 3)
+(run "fig52 D alphabeta" alpha-beta-search 'D f52 'd3 3)
+(check-equal "fig52 play ab vs ab" (play-game (make-fig52-game) alpha-beta-player alpha-beta-player) 3)
+(check-equal "fig52 to-move" (list (game-to-move f52 'A) (game-to-move f52 'C) (game-to-move f52 'C2)) '(MAX MIN MAX))
+
+
+; --- tic-tac-toe positions from aima-python tests/test_games.py
+(define ttt (make-tictactoe 3 3 3))
+(define s1 (ttt-state 'X (list (cons 1 1) (cons 3 3)) (list (cons 1 2) (cons 3 2))))
+(run "ttt1 minimax" minimax-decision s1 ttt (cons 2 2) 105)
+(run "ttt1 alphabeta" alpha-beta-search s1 ttt (cons 2 2) 40)
+(define s2 (ttt-state 'O (list (cons 1 1) (cons 3 1) (cons 3 3)) (list (cons 1 2) (cons 3 2))))
+(run "ttt2 minimax" minimax-decision s2 ttt (cons 2 2) 25)
+(run "ttt2 alphabeta" alpha-beta-search s2 ttt (cons 2 2) 18)
+(define s4 (ttt-state 'X (list (cons 1 1) (cons 3 1)) (list (cons 2 2) (cons 3 1))))
+(run "ttt4 minimax" minimax-decision s4 ttt (cons 1 3) 932)
+(run "ttt4 alphabeta" alpha-beta-search s4 ttt (cons 1 3) 115)
+(define s3 (ttt-state 'O (list (cons 1 1)) '()))
+(run "ttt3 alphabeta" alpha-beta-search s3 ttt (cons 2 2) 2337)
+
+; game mechanics
+(define w (game-result ttt (ttt-state 'X (list (cons 1 1) (cons 1 2)) (list (cons 2 1) (cons 2 2))) (cons 1 3)))
+(check-equal "ttt X wins row" (list (game-utility ttt w 'X) (game-utility ttt w 'O) (game-terminal? ttt w)) (list 1 -1 #t))
+(define d (game-result ttt (ttt-state 'O (list (cons 1 1)) '()) (cons 3 3)))
+(check-equal "ttt no win yet" (list (game-utility ttt d 'X) (game-terminal? ttt d) (length (ttt-moves d)) (game-to-move ttt d)) (list 0 #f 7 (quote X)))
+(check-true "ttt illegal move is a no-op" (eq? (game-result ttt d (cons 1 1)) d))
+(check-equal "ttt initial moves row-major" (length (ttt-moves (game-initial ttt))) 9)
