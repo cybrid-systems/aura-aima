@@ -8,8 +8,8 @@
 
 (define australia-spec '((SA WA NT Q NSW V) (NT WA Q) (NSW Q V) (T)))
 
-; Returns -1 when absent: in Soft 0 is falsy (aura#4491), so an index cannot double as a truth value.
-(define (index-of x xs) (let lp ((xs xs) (i 0)) (cond ((null? xs) -1) ((eq? (car xs) x) i) (else (lp (cdr xs) (+ i 1))))))
+; Index of x in xs, or #f when absent (index-or-#f; only #f is false since aura#4491).
+(define (index-of x xs) (let lp ((xs xs) (i 0)) (cond ((null? xs) #f) ((eq? (car xs) x) i) (else (lp (cdr xs) (+ i 1))))))
 (define (region-index c r) (index-of r (vector->list (csp-names c))))
 
 ;; Built without set!/set-car! on internal defines: that version came out
@@ -23,7 +23,7 @@
 (define (first-seen es)
   (let lp ((es es) (names (list)))
     (if (null? es) (reverse names)
-        (lp (cdr es) (if (>= (index-of (car (car es)) names) 0) names (cons (car (car es)) names))))))
+        (lp (cdr es) (if (index-of (car (car es)) names) names (cons (car (car es)) names))))))
 (define (neighbors-of a es)
   (let lp ((es es) (acc (list)))
     (cond ((null? es) (reverse acc))
