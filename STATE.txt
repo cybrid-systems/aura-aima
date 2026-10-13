@@ -1,6 +1,6 @@
 # aura-aima state (machine-readable, key=value)
 aura_repo=https://github.com/cybrid-systems/aura
-aura_tip=9058d36c4  # build-rel (RelWithDebInfo), Soft
+aura_tip=72b452f75  # build-rel (RelWithDebInfo), Soft; re-pinned 2026-10-13 (aura#4492 fixed: builtin map)
 aura_face=soft  # AURA_SANDBOX=off AURA_PIPELINE_STRICT=0
 reference=https://github.com/aimacode/aima-python  # MIT, oracle only, checked at f104e03
 
@@ -14,4 +14,4 @@ aura_issues_filed=4487,4488,4489,4490,4491,4492
 aura_issues_fixed=
 aura_issues_open=4487,4488,4489,4490,4491,4492
 next=planned scope (search/games/csp/mdp) complete; optional: ch4 local search, ch7 logic, ch13 probability, ch21 RL
-builtin_map=unused  # all lib code uses lmap (#4492)
+builtin_map=used  # lmap removed: aura#4492 fixed (map results GC-rooted)

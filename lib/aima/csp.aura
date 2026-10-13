@@ -20,7 +20,6 @@
         first-unassigned-variable mrv unordered-domain-values lcv
         no-inference forward-checking backtracking-search
         ac3 min-conflicts make-rng rng-int!)
-(require "aima/list" all:)
 
 (define UNSET (list 'unset))
 (define (make-csp names domains neighbors constraint)
@@ -143,7 +142,7 @@
 (define (stable-sort-by xs key)
   (define (ins p sorted)
     (cond ((null? sorted) (list p)) ((< (car p) (car (car sorted))) (cons p sorted)) (else (cons (car sorted) (ins p (cdr sorted))))))
-  (lmap cdr (let lp ((xs xs) (acc '())) (if (null? xs) acc (lp (cdr xs) (ins (cons (key (car xs)) (car xs)) acc))))))
+  (map cdr (let lp ((xs xs) (acc '())) (if (null? xs) acc (lp (cdr xs) (ins (cons (key (car xs)) (car xs)) acc))))))
 (define (lcv v asg c) (stable-sort-by (choices c v) (lambda (x) (count-lost-values c v x asg))))
 (define (no-inference c v x asg rem) #t)
 (define (forward-checking c v x asg rem)
@@ -186,7 +185,7 @@
 (define (ac3 c)
   (csp-support-pruning! c)
   (let ((q (let lp ((v (- (csp-n c) 1)) (acc '()))
-             (if (< v 0) acc (lp (- v 1) (append (lmap (lambda (k) (list v k)) (neighbors c v)) acc))))))
+             (if (< v 0) acc (lp (- v 1) (append (map (lambda (k) (list v k)) (neighbors c v)) acc))))))
     (let loop ((q q))
       (if (null? q) #t
           (let ((xi (car (car q))) (xj (cadr (car q))))

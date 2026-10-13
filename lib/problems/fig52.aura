@@ -1,7 +1,6 @@
 ; problems/fig52.aura — the two-ply game tree of AIMA Fig 5.2 (aima-python Fig52Game).
 ; Tables are proper lists, not dotted pairs (#4487).
 (require "aima/games" all:)
-(require "aima/list" all:)
 (require "problems/graph" all:)   ; sym-assq
 (export make-fig52-game)
 
@@ -13,7 +12,7 @@
 
 (define (make-fig52-game)
   (make-game 'A
-             (lambda (s) (let ((e (sym-assq s succs))) (if e (lmap car (cdr e)) '())))
+             (lambda (s) (let ((e (sym-assq s succs))) (if e (map car (cdr e)) '())))
              (lambda (s m) (cadr (sym-assq m (cdr (sym-assq s succs)))))
              (lambda (s p) (let ((u (cadr (sym-assq s utils)))) (if (eq? p 'MAX) u (- u))))
              (lambda (s) (not (sym-assq s succs)))

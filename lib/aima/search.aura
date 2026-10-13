@@ -15,7 +15,6 @@
 ;
 ; Node = (vector state parent action path-cost depth); parent is #f at the root.
 (require "aima/pq" all:)
-(require "aima/list" all:)  ; lmap instead of builtin map (#4492)
 (export make-problem problem-initial problem-stats problem-reset! problem-h
         node-state node-parent node-action node-cost node-depth
         node-path-states node-solution
@@ -61,8 +60,8 @@
 
 (define (node-path n)
   (let lp ((n n) (acc '())) (if n (lp (node-parent n) (cons n acc)) acc)))
-(define (node-path-states n) (lmap node-state (node-path n)))
-(define (node-solution n) (lmap node-action (cdr (node-path n))))
+(define (node-path-states n) (map node-state (node-path n)))
+(define (node-solution n) (map node-action (cdr (node-path n))))
 
 ; --- small helpers: state sets keyed by a user key function.
 ; Keys must be ints, strings or symbols: Aura hash tables compare other keys

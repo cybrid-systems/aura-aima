@@ -4,7 +4,6 @@
 ;; Expected lists are built with (list ...) — quoted data is unsafe (#4487, #4490).
 (require "aima/check" all:)
 (require "aima/csp" all:)
-(require "aima/list" all:)
 (require "problems/map-coloring" all:)
 
 (define (mk name) (cond ((equal? name "aus") (make-map-coloring-csp (list (quote R) (quote G) (quote B)) australia-spec))

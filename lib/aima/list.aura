@@ -1,8 +1,0 @@
-; aima/list.aura — list helpers that avoid known Soft issues.
-; lmap: the builtin map keeps already-mapped results only in a C++ vector while
-; it applies f to the rest, so when f allocates (e.g. a nested map) earlier
-; results can be reclaimed and reused (aura#4492). lmap is a plain Aura loop.
-(export lmap)
-(define (lmap f xs)
-  (let lp ((xs xs) (acc (list)))
-    (if (null? xs) (reverse acc) (lp (cdr xs) (cons (f (car xs)) acc)))))

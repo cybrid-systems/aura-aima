@@ -1,14 +1,13 @@
 ;; Ch6 CSP: AC-3 fixpoint domains and min-conflicts (seeded LCG) on Australia / n-queens.
 (require "aima/check" all:)
 (require "aima/csp" all:)
-(require "aima/list" all:)
 (require "problems/map-coloring" all:)
 
 (define (aus) (make-map-coloring-csp (list (quote R) (quote G) (quote B)) australia-spec))
 (define (idx c r) (region-index c r))
 (define (pre c regs cols) (if (null? regs) #t (begin (csp-set-domain! c (idx c (car regs)) (list (car cols))) (pre c (cdr regs) (cdr cols)))))
 (define (sym-sort xs) (let ((order (list (quote B) (quote G) (quote R)))) (let lp ((o order) (acc (list))) (if (null? o) (reverse acc) (lp (cdr o) (if (member (car o) xs) (cons (car o) acc) acc))))))
-(define (domains c) (lmap sym-sort (vector->list (csp-curr-domains c))))
+(define (domains c) (map sym-sort (vector->list (csp-curr-domains c))))
 (define c (aus))
 (check-true "ac3 plain consistent" (ac3 c))
 (check-equal "ac3 plain domains" (domains c) (list (list (quote B) (quote G) (quote R)) (list (quote B) (quote G) (quote R)) (list (quote B) (quote G) (quote R)) (list (quote B) (quote G) (quote R)) (list (quote B) (quote G) (quote R)) (list (quote B) (quote G) (quote R))))

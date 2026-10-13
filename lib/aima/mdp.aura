@@ -8,7 +8,6 @@
 ; data is unsafe in Soft (#4487, #4490). Coordinates (x, y) have y = 0 at the bottom.
 ; States are numbered in sorted (x, y) order. Actions are 0..3 = E N W S
 ; (aima-python `orientations`); -1 is the terminal "None" action.
-(require "aima/list" all:)
 (export make-grid-mdp mdp-n mdp-state mdp-index mdp-reward mdp-terminal?
         value-iteration best-policy policy-iteration policy-evaluation!
         policy->string q-value)

@@ -4,7 +4,6 @@
 ; regions are numbered in first-seen order (Python defaultdict insertion order).
 ; Like aima-python, a region with no neighbours (Tasmania in "T: ") never appears.
 (require "aima/csp" all:)
-(require "aima/list" all:)
 (export make-map-coloring-csp australia-spec region-index edges first-seen)
 
 (define australia-spec '((SA WA NT Q NSW V) (NT WA Q) (NSW Q V) (T)))
@@ -33,5 +32,5 @@
 (define (make-map-coloring-csp colors spec)
   (let* ((es (edges spec)) (names (first-seen es)))
     (make-csp (list->vector names) (make-vector (length names) colors)
-              (list->vector (lmap (lambda (a) (lmap (lambda (b) (index-of b names)) (neighbors-of a es))) names))
+              (list->vector (map (lambda (a) (map (lambda (b) (index-of b names)) (neighbors-of a es))) names))
               (lambda (A a B b) (not (eq? a b))))))

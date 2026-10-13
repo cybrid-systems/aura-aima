@@ -37,7 +37,7 @@ scripts/run.sh chapters/ch03_search/romania.aura
 
 ```
 lib/aima/        search.aura (Problem/Node/searchers), pq.aura (heap), check.aura
-lib/aima/        games.aura (Game, minimax, alpha-beta, play-game), csp.aura, mdp.aura, list.aura (lmap)
+lib/aima/        games.aura (Game, minimax, alpha-beta, play-game), csp.aura, mdp.aura
 lib/problems/    graph.aura (Romania, Australia), eight-puzzle.aura, grid.aura, fig52.aura, tictactoe.aura, map-coloring.aura
 chapters/        per-chapter demos + notes
 tests/           test_*.aura; tests/oracle/ aima-python scripts and their output
